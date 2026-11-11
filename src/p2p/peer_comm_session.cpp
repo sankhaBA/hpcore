@@ -108,6 +108,25 @@ namespace p2p
             const p2p::peer_challenge chall = p2pmsg::create_peer_challenge_from_msg(mi);
             flatbuffers::FlatBufferBuilder fbuf;
 
+            // Check whether hp versions match.
+            if (!p2pmsg::is_same_hp_version(mi))
+            {
+                LOG_ERROR << "HotPocket version mismatch. Dropping connection " << display_name();
+
+                if (is_inbound)
+                {
+                    // Sending a graceful rejection.
+                    p2pmsg::create_suppress_msg(fbuf, p2p::SUPPRESS_REASON::VERSION_MISMATCH);
+                    return send(msg::fbuf::builder_to_string_view(fbuf));
+                }
+
+                // Not waiting for the peer suppression since peers on older versions never send it.
+                if (known_ipport.has_value())
+                    p2p::mark_known_peer_suppressed(known_ipport.value());
+
+                return -1;
+            }
+
             // Check whether contract ids match.
             if (chall.contract_id != conf::cfg.contract.id)
             {
@@ -142,8 +161,8 @@ namespace p2p
         }
         else if (mi.type == p2pmsg::P2PMsgContent_PeerChallengeResponseMsg)
         {
-            // Ignore if challenge is already resolved.
-            if (challenge_status == comm::CHALLENGE_STATUS::CHALLENGE_ISSUED)
+            // Ignore if challenge is already resolved or the peer is on a different hp version.
+            if (challenge_status == comm::CHALLENGE_STATUS::CHALLENGE_ISSUED && p2pmsg::is_same_hp_version(mi))
                 return p2p::resolve_peer_challenge(*this, p2pmsg::create_peer_challenge_response_from_msg(mi));
         }
         else if (mi.type == p2pmsg::P2PMsgContent_SuppressMsg)

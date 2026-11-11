@@ -654,9 +654,9 @@ namespace hpws
             else
             {
                 addr_buf[0] = addr[0];
-                addr_buf[1] = addr[2];
-                addr_buf[2] = addr[3];
-                addr_buf[3] = addr[4];
+                addr_buf[1] = addr[1];
+                addr_buf[2] = addr[2];
+                addr_buf[3] = addr[3];
             }
 
             *(uint32_t *)&buf[len - 4] = ttl_sec;
@@ -681,9 +681,9 @@ namespace hpws
             else
             {
                 addr_buf[0] = addr[0];
-                addr_buf[1] = addr[2];
-                addr_buf[2] = addr[3];
-                addr_buf[3] = addr[4];
+                addr_buf[1] = addr[1];
+                addr_buf[2] = addr[2];
+                addr_buf[3] = addr[3];
             }
 
             if (write(this->master_control_fd_, buf, len) == -1)

@@ -20,6 +20,8 @@ namespace msg::fbuf::p2pmsg
 
     bool verify_npl_msg_trust(const p2p::peer_message_info &mi);
 
+    bool is_same_hp_version(const p2p::peer_message_info &mi);
+
     const p2p::peer_challenge create_peer_challenge_from_msg(const p2p::peer_message_info &mi);
 
     const p2p::peer_challenge_response create_peer_challenge_response_from_msg(const p2p::peer_message_info &mi);

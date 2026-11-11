@@ -222,27 +222,30 @@ bool VerifyP2PMsgContentVector(flatbuffers::Verifier &verifier, const flatbuffer
 
 enum SuppressReason {
   SuppressReason_ContractIdMismatch = 0,
+  SuppressReason_VersionMismatch = 1,
   SuppressReason_MIN = SuppressReason_ContractIdMismatch,
-  SuppressReason_MAX = SuppressReason_ContractIdMismatch
+  SuppressReason_MAX = SuppressReason_VersionMismatch
 };
 
-inline const SuppressReason (&EnumValuesSuppressReason())[1] {
+inline const SuppressReason (&EnumValuesSuppressReason())[2] {
   static const SuppressReason values[] = {
-    SuppressReason_ContractIdMismatch
+    SuppressReason_ContractIdMismatch,
+    SuppressReason_VersionMismatch
   };
   return values;
 }
 
 inline const char * const *EnumNamesSuppressReason() {
-  static const char * const names[2] = {
+  static const char * const names[3] = {
     "ContractIdMismatch",
+    "VersionMismatch",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameSuppressReason(SuppressReason e) {
-  if (flatbuffers::IsOutRange(e, SuppressReason_ContractIdMismatch, SuppressReason_ContractIdMismatch)) return "";
+  if (flatbuffers::IsOutRange(e, SuppressReason_ContractIdMismatch, SuppressReason_VersionMismatch)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesSuppressReason()[index];
 }

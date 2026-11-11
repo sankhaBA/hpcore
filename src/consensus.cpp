@@ -267,7 +267,7 @@ namespace consensus
         // Find the winning hash and no. of votes for it.
         uint32_t winning_votes = 0;
         util::h32 winning_hash = util::h32_empty;
-        for (const auto [hash, proposals] : proposal_groups)
+        for (const auto &[hash, proposals] : proposal_groups)
         {
             if (proposals.size() > winning_votes)
             {
@@ -1076,8 +1076,7 @@ namespace consensus
         }
 
         // Check whether we have received enough votes in total.
-        // Threshold is devided by 100 to convert average to decimal.
-        const uint32_t min_votes_required = ceil((conf::cfg.contract.consensus.threshold / 100.0) * unl_count);
+        const uint32_t min_votes_required = get_ledger_hash_min_votes(unl_count);
         if (total_ledger_primary_hash_votes < min_votes_required)
         {
             LOG_INFO << "Not enough peers proposing to perform consensus. votes:" << total_ledger_primary_hash_votes << " needed:" << min_votes_required;
@@ -1111,6 +1110,23 @@ namespace consensus
             is_desync = false;
             return true;
         }
+    }
+
+    /**
+     * Calculates the minimum votes required to accept the ledger hash in the current stage.
+     * @param unl_count Number of nodes in the unl.
+     * @return Minimum votes required according to the configured ledger threshold mode.
+     */
+    uint32_t get_ledger_hash_min_votes(const size_t unl_count)
+    {
+        // Threshold is devided by 100 to convert average to decimal.
+        if (conf::cfg.contract.consensus.ledger_threshold_mode == conf::LEDGER_THRESHOLD_MODE::STAGE_SCALED)
+        {
+            const float stage_threshold = ((STAGE_THRESHOLD_RATIO[ctx.stage - 1] * conf::cfg.contract.consensus.threshold) / (STAGE_THRESHOLD_RATIO[2] * 100.0));
+            return ceil(stage_threshold * unl_count);
+        }
+
+        return ceil((conf::cfg.contract.consensus.threshold / 100.0) * unl_count);
     }
 
     /**
@@ -1474,7 +1490,7 @@ namespace consensus
         // We allocate configured stage slice for stages 1, 2, 3. Stage 0 gets the entire remaining time from the round window.
         ctx.stage123_duration = conf::cfg.contract.consensus.roundtime * conf::cfg.contract.consensus.stage_slice / 100;
         ctx.stage0_duration = conf::cfg.contract.consensus.roundtime - (ctx.stage123_duration * 3);
-        ctx.stage_reset_wait_threshold = conf::cfg.contract.consensus.roundtime / 10;
+        ctx.stage_reset_wait_threshold = conf::cfg.contract.consensus.roundtime / conf::cfg.contract.consensus.stage_reset_divisor;
 
         // We use a time window boundry offset based on contract id to vary the window boundries between
         // different contracts with same round time.

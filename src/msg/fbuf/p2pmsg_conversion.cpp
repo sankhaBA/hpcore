@@ -15,6 +15,9 @@ namespace msg::fbuf::p2pmsg
     // Max size of messages which are subjected to time (too old) check.
     constexpr size_t MAX_SIZE_FOR_TIME_CHECK = 1 * 1024 * 1024; // 1 MB
 
+    // Leading hp version bytes compared between peers (major, minor and patch). Reserved bytes are ignored.
+    constexpr size_t PEER_VERSION_COMPARE_LEN = 6;
+
     /**
      * This section contains Flatbuffer message reading/writing helpers.
      * A p2p flatbuffer message is a bucket with hp version and the message 'content'.
@@ -118,6 +121,18 @@ namespace msg::fbuf::p2pmsg
 
         const util::h32 hash = hasher.hash();
         return crypto::verify(hash.to_string_view(), flatbuf_bytes_to_sv(msg.sig()), pubkey) == 0;
+    }
+
+    /**
+     * Checks whether the peer message was created by the same HotPocket version as this node.
+     * @return true if major, minor and patch versions match. false otherwise.
+     */
+    bool is_same_hp_version(const p2p::peer_message_info &mi)
+    {
+        const auto *peer_version = mi.p2p_msg->hp_version();
+        return peer_version &&
+               peer_version->size() == version::VERSION_BYTES_LEN &&
+               memcmp(peer_version->data(), version::HP_VERSION_BYTES, PEER_VERSION_COMPARE_LEN) == 0;
     }
 
     const p2p::peer_challenge create_peer_challenge_from_msg(const p2p::peer_message_info &mi)

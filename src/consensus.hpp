@@ -201,6 +201,8 @@ namespace consensus
 
     bool check_last_primary_shard_hash_votes(bool &is_desync, util::sequence_hash &majority_primary_shard_id, vote_counter &votes, const size_t unl_count);
 
+    uint32_t get_ledger_hash_min_votes(const size_t unl_count);
+
     void check_last_raw_shard_hash_votes(bool &is_ledger_blob_desync, util::sequence_hash &majority_raw_shard_id, vote_counter &votes);
 
     void check_state_votes(bool &is_state_desync, util::h32 &majority_state_hash, vote_counter &votes);

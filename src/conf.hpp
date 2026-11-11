@@ -15,6 +15,9 @@ namespace conf
     // Max size of messages which are subjected to duplicate message check.
     constexpr size_t MAX_SIZE_FOR_DUP_CHECK = 1 * 1024 * 1024; // 1 MB
 
+    // Default divisor applied to round time to derive the stage reset wait threshold.
+    constexpr uint16_t DEFAULT_STAGE_RESET_DIVISOR = 10;
+
 #define CURRENT_TIME_CONFIG ((conf::cfg.contract.consensus.roundtime * 100) + conf::cfg.contract.consensus.stage_slice)
 
     // Struct to represent ip and port of the peer.
@@ -134,6 +137,13 @@ namespace conf
         PRIVATE
     };
 
+    // Vote rule for accepting the ledger hash.
+    enum LEDGER_THRESHOLD_MODE
+    {
+        FIXED,       // Same threshold in every stage.
+        STAGE_SCALED // Threshold scaled per stage, same as the other proposal votes.
+    };
+
     // Max number of shards to keep for primary and raw shards.
     struct history_configuration
     {
@@ -179,6 +189,8 @@ namespace conf
         std::atomic<uint32_t> roundtime = 0;   // Consensus round time in ms (max: 3,600,000).
         std::atomic<uint32_t> stage_slice = 0; // Percentage slice of round time that stages 0,1,2 get (max: 33).
         uint16_t threshold = 0;
+        LEDGER_THRESHOLD_MODE ledger_threshold_mode = LEDGER_THRESHOLD_MODE::FIXED; // Vote rule for accepting the ledger hash.
+        uint16_t stage_reset_divisor = DEFAULT_STAGE_RESET_DIVISOR;                 // Stage is reset when remaining time is below roundtime/divisor.
     };
 
     struct npl_config
@@ -234,6 +246,7 @@ namespace conf
         uint32_t idle_timeout = 0;                // Idle connection timeout ms for peer connections.
         std::set<peer_ip_port> known_peers;       // Ordered set of peers with ip_port.
         bool msg_forwarding = false;              // Whether peer message forwarding is on/off.
+        bool peer_visa = true;                    // Whether peers must obtain a UDP visa before connecting.
         uint16_t max_connections = 0;             // Max peer connections.
         uint16_t max_known_connections = 0;       // Max known peer connections.
         uint16_t max_in_connections_per_host = 0; // Max inbound peer connections per remote host (IP).

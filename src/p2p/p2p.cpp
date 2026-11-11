@@ -386,19 +386,30 @@ namespace p2p
      */
     void handle_suppress_message(const p2p::suppress_message &suppression, peer_comm_session *session)
     {
-        if (suppression.reason == SUPPRESS_REASON::CONTRACT_MISMATCH)
+        if (suppression.reason == SUPPRESS_REASON::CONTRACT_MISMATCH || suppression.reason == SUPPRESS_REASON::VERSION_MISMATCH)
         {
-            LOG_DEBUG << "Peer " << session->known_ipport->to_string() << " suppressed us. Reason (" << SUPPRESS_REASON::CONTRACT_MISMATCH << ").";
-            const auto itr = std::find_if(ctx.server->req_known_remotes.begin(), ctx.server->req_known_remotes.end(), [&](peer_properties &p)
-                                          { return p.ip_port == session->known_ipport; });
-            if (itr != ctx.server->req_known_remotes.end())
-            {
-                LOG_DEBUG << "Marking to omit peer " << session->known_ipport->to_string();
-                itr->has_suppressed_us = true;
-            }
+            LOG_DEBUG << "Peer " << session->known_ipport->to_string() << " suppressed us. Reason (" << suppression.reason << ").";
+            mark_known_peer_suppressed(*session->known_ipport);
         }
         else
             LOG_DEBUG << "Invalid suppressing reason.";
+    }
+
+    /**
+     * Marks the given known peer as suppressed so it will not be connected again.
+     * @param ip_port Ip and port of the known peer.
+     */
+    void mark_known_peer_suppressed(const conf::peer_ip_port &ip_port)
+    {
+        std::scoped_lock<std::mutex> lock(ctx.server->req_known_remotes_mutex);
+
+        const auto itr = std::find_if(ctx.server->req_known_remotes.begin(), ctx.server->req_known_remotes.end(), [&](peer_properties &p)
+                                      { return p.ip_port == ip_port; });
+        if (itr != ctx.server->req_known_remotes.end())
+        {
+            LOG_DEBUG << "Marking to omit peer " << ip_port.to_string();
+            itr->has_suppressed_us = true;
+        }
     }
 
     /**

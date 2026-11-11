@@ -20,16 +20,21 @@ sudo cp -r $cmake/bin/* /usr/local/bin/
 sudo cp -r $cmake/share/* /usr/local/share/
 rm $cmake.tar.gz && rm -r $cmake
 
-# Blake3
-git clone https://github.com/BLAKE3-team/BLAKE3.git
-pushd BLAKE3/c > /dev/null 2>&1
-gcc -shared -fPIC -O3 -o libblake3.so blake3.c blake3_dispatch.c blake3_portable.c \
+# Blake3 (pinned release, linked statically)
+blake3=1.8.7
+blake3_sha256=c6782a28842b1c0478524ac06a4f2ede784038ee298d6e2162c0b089c4306a3c
+wget https://github.com/BLAKE3-team/BLAKE3/archive/refs/tags/$blake3.tar.gz
+echo "$blake3_sha256  $blake3.tar.gz" | sha256sum -c -
+tar -zxvf $blake3.tar.gz
+pushd BLAKE3-$blake3/c > /dev/null 2>&1
+gcc -c -fPIC -O3 blake3.c blake3_dispatch.c blake3_portable.c \
     blake3_sse2_x86-64_unix.S blake3_sse41_x86-64_unix.S blake3_avx2_x86-64_unix.S \
     blake3_avx512_x86-64_unix.S
+ar rcs libblake3.a *.o
 sudo cp blake3.h /usr/local/include/
-sudo cp libblake3.so /usr/local/lib/
+sudo cp libblake3.a /usr/local/lib/
 popd > /dev/null 2>&1
-sudo rm -r BLAKE3
+rm $blake3.tar.gz && rm -r BLAKE3-$blake3
 
 # jsoncons
 wget https://github.com/danielaparker/jsoncons/archive/v0.153.3.tar.gz
@@ -45,7 +50,8 @@ rm v0.153.3.tar.gz && rm -r jsoncons-0.153.3
 wget https://github.com/google/flatbuffers/archive/v1.12.0.tar.gz
 tar -zxvf v1.12.0.tar.gz
 pushd flatbuffers-1.12.0 > /dev/null 2>&1
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DFLATBUFFERS_BUILD_TESTS=OFF \
+    -DCMAKE_CXX_FLAGS="-Wno-error=stringop-overflow" # gcc 12+ false positive in flatbuffers 1.12.0.
 make
 sudo cp -r include/flatbuffers /usr/local/include/
 # Copy the flatbuffers compiler

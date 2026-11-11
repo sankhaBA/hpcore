@@ -83,7 +83,7 @@ table NplMsg {
     // Make sure to update signature generation/verification whenever these fields are changed.
 }
 
-enum SuppressReason : byte { ContractIdMismatch = 0 }
+enum SuppressReason : byte { ContractIdMismatch = 0, VersionMismatch = 1 }
 
 table SuppressMsg {
     pubkey:[ubyte]; // Sender pubkey.

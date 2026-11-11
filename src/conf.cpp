@@ -23,6 +23,8 @@ namespace conf
     constexpr uint32_t MAX_ROUND_TIME = 3600000;
     constexpr uint32_t MAX_STAGE_SLICE = 33;
     constexpr uint32_t MAX_THRESHOLD = 100;
+    constexpr uint16_t MIN_STAGE_RESET_DIVISOR = 2;
+    constexpr uint16_t MAX_STAGE_RESET_DIVISOR = 100;
 
     constexpr const char *ROLE_OBSERVER = "observer";
     constexpr const char *ROLE_VALIDATOR = "validator";
@@ -30,6 +32,8 @@ namespace conf
     constexpr const char *HISTORY_CUSTOM = "custom";
     constexpr const char *MODE_PUBLIC = "public";
     constexpr const char *MODE_PRIVATE = "private";
+    constexpr const char *LEDGER_THRESHOLD_FIXED = "fixed";
+    constexpr const char *LEDGER_THRESHOLD_STAGE_SCALED = "stage_scaled";
 
     bool init_success = false;
 
@@ -419,6 +423,7 @@ namespace conf
                     splitted_peers.clear();
                 }
                 cfg.mesh.msg_forwarding = mesh["msg_forwarding"].as<bool>();
+                cfg.mesh.peer_visa = mesh.get_value_or<bool>("peer_visa", true); // Optional for configs created before 0.6.6.
                 cfg.mesh.max_connections = mesh["max_connections"].as<uint16_t>();
                 cfg.mesh.max_known_connections = mesh["max_known_connections"].as<uint16_t>();
                 cfg.mesh.max_in_connections_per_host = mesh["max_in_connections_per_host"].as<uint16_t>();
@@ -563,6 +568,7 @@ namespace conf
             }
             mesh_config.insert_or_assign("known_peers", peers);
             mesh_config.insert_or_assign("msg_forwarding", cfg.mesh.msg_forwarding);
+            mesh_config.insert_or_assign("peer_visa", cfg.mesh.peer_visa);
             mesh_config.insert_or_assign("max_connections", cfg.mesh.max_connections);
             mesh_config.insert_or_assign("max_known_connections", cfg.mesh.max_known_connections);
             mesh_config.insert_or_assign("max_in_connections_per_host", cfg.mesh.max_in_connections_per_host);
@@ -956,6 +962,8 @@ namespace conf
         consensus.insert_or_assign("roundtime", contract.consensus.roundtime.load());
         consensus.insert_or_assign("stage_slice", contract.consensus.stage_slice.load());
         consensus.insert_or_assign("threshold", contract.consensus.threshold);
+        consensus.insert_or_assign("ledger_threshold_mode", contract.consensus.ledger_threshold_mode == LEDGER_THRESHOLD_MODE::STAGE_SCALED ? LEDGER_THRESHOLD_STAGE_SCALED : LEDGER_THRESHOLD_FIXED);
+        consensus.insert_or_assign("stage_reset_divisor", contract.consensus.stage_reset_divisor);
         jdoc.insert_or_assign("consensus", consensus);
 
         jsoncons::ojson npl;
@@ -1094,6 +1102,22 @@ namespace conf
                 return -1;
             }
             contract.consensus.mode = jdoc["consensus"]["mode"].as<std::string>() == MODE_PUBLIC ? MODE::PUBLIC : MODE::PRIVATE;
+
+            // Optional for configs created before 0.6.6. Missing values keep the earlier consensus behaviour.
+            const std::string ledger_threshold_mode = jdoc["consensus"].get_value_or<std::string>("ledger_threshold_mode", LEDGER_THRESHOLD_FIXED);
+            if (ledger_threshold_mode != LEDGER_THRESHOLD_FIXED && ledger_threshold_mode != LEDGER_THRESHOLD_STAGE_SCALED)
+            {
+                std::cerr << "Invalid ledger threshold mode configured. Valid values: " << LEDGER_THRESHOLD_FIXED << "|" << LEDGER_THRESHOLD_STAGE_SCALED << "\n";
+                return -1;
+            }
+            contract.consensus.ledger_threshold_mode = ledger_threshold_mode == LEDGER_THRESHOLD_STAGE_SCALED ? LEDGER_THRESHOLD_MODE::STAGE_SCALED : LEDGER_THRESHOLD_MODE::FIXED;
+
+            contract.consensus.stage_reset_divisor = jdoc["consensus"].get_value_or<uint16_t>("stage_reset_divisor", DEFAULT_STAGE_RESET_DIVISOR);
+            if (contract.consensus.stage_reset_divisor < MIN_STAGE_RESET_DIVISOR || contract.consensus.stage_reset_divisor > MAX_STAGE_RESET_DIVISOR)
+            {
+                std::cerr << "Stage reset divisor must be between " << MIN_STAGE_RESET_DIVISOR << " and " << MAX_STAGE_RESET_DIVISOR << " inclusive.\n";
+                return -1;
+            }
 
             jpath = "contract.npl";
             if (jdoc["npl"]["mode"].as<std::string>() != MODE_PUBLIC && jdoc["npl"]["mode"].as<std::string>() != MODE_PRIVATE)

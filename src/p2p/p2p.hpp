@@ -127,7 +127,8 @@ namespace p2p
 
     enum SUPPRESS_REASON
     {
-        CONTRACT_MISMATCH = 0 // Suppress due to contract mismatch.
+        CONTRACT_MISMATCH = 0, // Suppress due to contract mismatch.
+        VERSION_MISMATCH = 1   // Suppress due to HotPocket version mismatch.
     };
 
     // Represents a peer suppression.
@@ -247,6 +248,8 @@ namespace p2p
     void handle_npl_message(const p2p::npl_message &npl);
 
     void handle_suppress_message(const p2p::suppress_message &suppression, peer_comm_session *session);
+
+    void mark_known_peer_suppressed(const conf::peer_ip_port &ip_port);
 
     bool validate_for_peer_msg_forwarding(const peer_comm_session &session, const enum msg::fbuf::p2pmsg::P2PMsgContent msg_type, const uint64_t originated_on);
 

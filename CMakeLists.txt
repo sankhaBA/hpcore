@@ -67,18 +67,22 @@ target_link_libraries(hpcore
     killswitch
     libsodium.a
     pthread
-    libblake3.so
+    libblake3.a
     libboost_stacktrace_backtrace.a
     backtrace
     sqlite3
     ${CMAKE_DL_LIBS} # Needed for stacktrace support
 )
 
-add_custom_command(TARGET hpcore POST_BUILD
+option(HP_BUNDLE_DEV_BINARIES "Copy the prebuilt hpws and hpfs from test/bin next to hpcore, for local development only." ON)
 
-    # COMMAND strip ./build/hpcore
-    COMMAND cp ./test/bin/hpws ./test/bin/hpfs ./evernode-license.pdf ./build/
-)
+if(HP_BUNDLE_DEV_BINARIES)
+    add_custom_command(TARGET hpcore POST_BUILD
+
+        # COMMAND strip ./build/hpcore
+        COMMAND cp ./test/bin/hpws ./test/bin/hpfs ./evernode-license.pdf ./build/
+    )
+endif()
 
 target_precompile_headers(hpcore PUBLIC src/pchheader.hpp)
 
@@ -89,7 +93,7 @@ add_custom_target(docker
     COMMAND cp ./build/hpcore ./test/local-cluster/bin/
     COMMAND cp ./test/bin/libblake3.so ./test/bin/hpws ./test/bin/hpfs ./test/local-cluster/bin/
     COMMAND cp ./evernode-license.pdf ./test/local-cluster/bin/
-    COMMAND docker build -t hpcore:latest -t hpcore:0.6.5 -f ./test/local-cluster/Dockerfile ./test/local-cluster/bin/
+    COMMAND docker build -t hpcore:latest -t hpcore:0.6.6 -f ./test/local-cluster/Dockerfile ./test/local-cluster/bin/
 )
 set_target_properties(docker PROPERTIES EXCLUDE_FROM_ALL TRUE)
 add_dependencies(docker hpcore)
