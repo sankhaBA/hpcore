@@ -51,3 +51,35 @@ Component commits, after hpfs and hpws are tagged. The tags are annotated, so us
 git ls-remote https://github.com/sankhaBA/hpfs.git 'refs/tags/0.5.1^{}' 'refs/tags/0.5.1'
 git ls-remote https://github.com/sankhaBA/hpws.git 'refs/tags/0.9.1^{}' 'refs/tags/0.9.1'
 ```
+
+## Cutting a release
+Components are tagged first, because the manifest names their commits. Release branches move by fast-forward only, and all tags are annotated.
+
+1. For each component that changed, fast-forward its `release` branch to the default branch (`main` for hpfs, `master` for hpws) and push the tag. Its release workflow checks the tag against the source version, builds it, and creates a release with no binaries.
+```
+git -C hpfs fetch origin && git -C hpfs switch release && git -C hpfs merge --ff-only origin/main
+git -C hpfs push origin release
+git -C hpfs tag -a 0.5.1 -m "Release 0.5.1" && git -C hpfs push origin 0.5.1
+```
+2. Put the component tags and commits into `engine.json`, as in [Updating the pins](#updating-the-pins), and merge that to hpcore `main`. CI fails while a named tag is missing or points to another commit.
+3. Fast-forward hpcore `release` and push a tag equal to `HP_VERSION`. The engine release workflow verifies the manifest, builds and smoke tests every platform, and publishes a pre-release with no binaries.
+```
+git -C hpcore fetch origin && git -C hpcore switch release && git -C hpcore merge --ff-only origin/main
+git -C hpcore push origin release
+git -C hpcore tag -a 0.6.6 -m "Release 0.6.6" && git -C hpcore push origin 0.6.6
+gh run watch --repo sankhaBA/hpcore
+```
+4. After the testnet trial, promote the pre-release.
+```
+gh release edit 0.6.6 --repo sankhaBA/hpcore --prerelease=false --latest
+```
+5. To revoke a release, add its version to `engine.revoked` of each affected network in evernode-resources `definitions/definitions.json`.
+
+## Repository variables
+The release workflows need these Actions variables. They use only the built-in `GITHUB_TOKEN`, so no secrets are needed.
+
+| Repo | Variable | Value |
+| --- | --- | --- |
+| hpcore | `RELEASE_BRANCH` | Branch every release tag must be on, normally `release`. |
+| hpcore | `ENGINE_REPO_OWNER` | Owner of the hpfs and hpws repos the manifest tags are checked against. |
+| hpfs, hpws | `RELEASE_BRANCH` | Branch every release tag must be on, normally `release`. |

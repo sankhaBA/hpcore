@@ -3,8 +3,8 @@
   "version": "0.6.6",
   "min_sashimono": "0.13.0",
   "components": {
-    "hpfs": { "tag": "0.5.1", "commit": "697f9f772475298838d2cfbf6590aabd4366143e", "version": "0.5.1" },
-    "hpws": { "tag": "0.9.1", "commit": "ba8be38bfddb62f30c2326934428228532b2b909", "version": "0.9.1" }
+    "hpfs": { "tag": "0.5.1", "commit": "823d6ba3a51bbd4bf6a34096681e8dbe92568f47", "version": "0.5.1" },
+    "hpws": { "tag": "0.9.1", "commit": "9233d2822ecd8c05370c27b61d5e7ea5f8547096", "version": "0.9.1" }
   },
   "platforms": {
     "ubt20": {
