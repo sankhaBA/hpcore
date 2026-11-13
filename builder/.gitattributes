@@ -1,0 +1,2 @@
+# The recipe runs inside Linux containers, so keep LF even on Windows checkouts.
+* text eol=lf

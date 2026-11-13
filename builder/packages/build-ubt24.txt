@@ -1,0 +1,9 @@
+build-essential
+cmake
+pkg-config
+libssl-dev
+libsodium-dev
+libsqlite3-dev
+libboost-stacktrace-dev
+libfuse3-dev
+time

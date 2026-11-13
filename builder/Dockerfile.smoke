@@ -1,0 +1,22 @@
+# Clean runtime image used only to smoke test the engine binaries. Built from the same pins as the builder image.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG UBUNTU_CODENAME
+ARG APT_SNAPSHOT
+ARG PACKAGES_FILE
+ENV DEBIAN_FRONTEND=noninteractive
+
+# The base image has no CA certificates, so TLS to the snapshot is not verified.
+# Packages stay verified through the snapshot's Release files, signed by the Ubuntu archive key.
+COPY ${PACKAGES_FILE} /tmp/packages.txt
+RUN rm -f /etc/apt/sources.list /etc/apt/sources.list.d/* \
+    && for pocket in "" -updates -security; do \
+         echo "deb [check-valid-until=no signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] https://snapshot.ubuntu.com/ubuntu/${APT_SNAPSHOT} ${UBUNTU_CODENAME}${pocket} main universe"; \
+       done >/etc/apt/sources.list.d/snapshot.list \
+    && printf '%s\n' 'Acquire::Retries "5";' 'Acquire::https::snapshot.ubuntu.com::Verify-Peer "false";' >/etc/apt/apt.conf.d/99snapshot \
+    && apt-get update \
+    && xargs -a /tmp/packages.txt apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/packages.txt
+
+WORKDIR /

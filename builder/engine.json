@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "version": "0.6.6",
+  "min_sashimono": "0.13.0",
+  "components": {
+    "hpfs": { "tag": "0.5.1", "commit": "697f9f772475298838d2cfbf6590aabd4366143e", "version": "0.5.1" },
+    "hpws": { "tag": "0.9.1", "commit": "ba8be38bfddb62f30c2326934428228532b2b909", "version": "0.9.1" }
+  },
+  "platforms": {
+    "ubt20": {
+      "base_image": "docker.io/library/ubuntu@sha256:8feb4d8ca5354def3d8fce243717141ce31e2c428701f6682bd2fafe15388214",
+      "codename": "focal",
+      "apt_snapshot": "20261111T000000Z"
+    },
+    "ubt24": {
+      "base_image": "docker.io/library/ubuntu@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5",
+      "codename": "noble",
+      "apt_snapshot": "20261111T000000Z"
+    }
+  }
+}

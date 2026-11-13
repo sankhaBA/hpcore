@@ -1,0 +1,9 @@
+# Pinned third-party sources for the HotPocket engine. Never "latest".
+# name              version   sha256                                                            url
+blake3              1.8.7     c6782a28842b1c0478524ac06a4f2ede784038ee298d6e2162c0b089c4306a3c  https://github.com/BLAKE3-team/BLAKE3/archive/refs/tags/1.8.7.tar.gz
+jsoncons            0.153.3   f1cb2baf8e76aa22eb5ae513cbb63b0583a23444f6c89a8a1ee818ded79acb90  https://github.com/danielaparker/jsoncons/archive/v0.153.3.tar.gz
+flatbuffers         1.12.0    62f2223fb9181d1d6338451375628975775f7522185266cd5296571ac152bc45  https://github.com/google/flatbuffers/archive/v1.12.0.tar.gz
+readerwriterqueue   1.0.3     1937b6e5e386de879865c33c7e46219b9d26bc8ff19737d480bc376a947654e4  https://github.com/cameron314/readerwriterqueue/archive/v1.0.3.tar.gz
+concurrentqueue     1.0.2     c3aeb97c97169f743a53ca33812ea2ab61dd06dfd28319ca3f0a0771372fc7fc  https://github.com/cameron314/concurrentqueue/archive/1.0.2.tar.gz
+plog                1.1.5     6c80b4701183d2415bec927e1f5ca9b1761b3b5c65d3e09fb29c743e016d5609  https://github.com/SergiusTheBest/plog/archive/1.1.5.tar.gz
+cli11               2.0.0     2c672f17bf56e8e6223a3bfb74055a946fa7b1ff376510371902adb9cb0ab6a3  https://github.com/CLIUtils/CLI11/archive/refs/tags/v2.0.0.tar.gz
