@@ -1,0 +1,136 @@
+name: Engine release
+
+on:
+  pull_request:
+    branches: [main, release]
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_BRANCH: ${{ vars.RELEASE_BRANCH }}
+  ENGINE_REPO_OWNER: ${{ vars.ENGINE_REPO_OWNER }}
+  MANIFEST: builder/engine.json
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify configuration
+        run: |
+          : "${RELEASE_BRANCH:?Repository variable RELEASE_BRANCH is not set}"
+          : "${ENGINE_REPO_OWNER:?Repository variable ENGINE_REPO_OWNER is not set}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on the release branch
+        if: github.ref_type == 'tag'
+        run: git merge-base --is-ancestor "$GITHUB_SHA" "origin/$RELEASE_BRANCH"
+
+      - name: Verify manifest
+        run: |
+          src_version=$(grep -oP 'HP_VERSION = "\K[^"]+' src/util/version.hpp)
+          manifest_version=$(jq -er .version "$MANIFEST")
+          [ "$manifest_version" == "$src_version" ] ||
+            { echo "::error::$MANIFEST version is $manifest_version, HP_VERSION is $src_version"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" == "tag" ] && [ "$GITHUB_REF_NAME" != "$src_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match HP_VERSION $src_version"
+            exit 1
+          fi
+          for component in hpfs hpws; do
+            tag=$(jq -er ".components.$component.tag" "$MANIFEST")
+            want=$(jq -er ".components.$component.commit" "$MANIFEST")
+            refs=$(git ls-remote --tags "https://github.com/$ENGINE_REPO_OWNER/$component.git" "refs/tags/$tag" "refs/tags/$tag^{}")
+            # The peeled line (^{}) exists only for annotated tags and holds the commit, so it wins.
+            got=$({ grep -F "refs/tags/$tag^{}" <<<"$refs" || grep -F "refs/tags/$tag" <<<"$refs" || true; } | head -n 1 | cut -f 1)
+            [ "$got" == "$want" ] ||
+              { echo "::error::$component tag $tag is '${got:-missing}', $MANIFEST says $want"; exit 1; }
+          done
+
+  build:
+    needs: verify
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubt20, ubt24]
+    env:
+      RECIPE: src/hpcore/builder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: src/hpcore
+
+      - name: Fetch components and dependencies
+        run: |
+          for component in hpfs hpws; do
+            git init -q "src/$component"
+            git -C "src/$component" fetch -q --depth 1 "https://github.com/$ENGINE_REPO_OWNER/$component.git" \
+              "$(jq -er ".components.$component.commit" "$RECIPE/engine.json")"
+            git -C "src/$component" -c advice.detachedHead=false checkout -q FETCH_HEAD
+          done
+          mkdir deps
+          grep -Ev '^\s*(#|$)' "$RECIPE/deps.lock" | while read -r name _ sha256 url; do
+            curl -fsSL --retry 3 -o "deps/$name.tar.gz" "$url"
+            echo "$sha256  deps/$name.tar.gz" | sha256sum -c -
+          done
+
+      - name: Build images
+        run: |
+          platform() { jq -er --arg os "${{ matrix.os }}" ".platforms[\$os].$1" "$RECIPE/engine.json"; }
+          for kind in build runtime; do
+            dockerfile=Dockerfile
+            [ "$kind" == runtime ] && dockerfile=Dockerfile.smoke
+            docker build -t "hp-$kind:${{ matrix.os }}" -f "$RECIPE/$dockerfile" \
+              --build-arg BASE_IMAGE="$(platform base_image)" \
+              --build-arg UBUNTU_CODENAME="$(platform codename)" \
+              --build-arg APT_SNAPSHOT="$(platform apt_snapshot)" \
+              --build-arg PACKAGES_FILE="packages/$kind-${{ matrix.os }}.txt" "$RECIPE"
+          done
+
+      - name: Compile offline
+        run: |
+          mkdir out
+          docker run --rm --network=none \
+            -v "$PWD/src:/src:ro" -v "$PWD/deps:/deps:ro" -v "$PWD/out:/out" \
+            -e BUILD_JOBS="$(nproc)" "hp-build:${{ matrix.os }}" bash /src/hpcore/builder/build-engine.sh
+
+      - name: Smoke test in a clean runtime container
+        run: |
+          expected=$(jq -r '[.version, .components.hpfs.version, .components.hpws.version] | join(" ")' "$RECIPE/engine.json")
+          actual=$(docker run --rm --network=none -v "$PWD/out:/usr/local/bin/hotpocket:ro" \
+            --entrypoint /bin/bash "hp-runtime:${{ matrix.os }}" -c '
+              set -e
+              cd /usr/local/bin/hotpocket
+              if ldd hpcore hpfs hpws | grep "not found" >&2; then exit 1; fi
+              echo "$(./hpcore version | head -n 1 | xargs) $(./hpfs version) $(./hpws -v)"')
+          [ "$actual" == "$expected" ] ||
+            { echo "::error::Built versions are '$actual', $MANIFEST says '$expected'"; exit 1; }
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Create pre-release (source only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "HotPocket $TAG" \
+            --notes "Engine release $TAG. Hosts build this tag from source using $MANIFEST. No binaries are attached."
