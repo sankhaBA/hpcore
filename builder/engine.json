@@ -3,7 +3,7 @@
   "version": "0.6.6",
   "min_sashimono": "0.13.0",
   "components": {
-    "hpfs": { "tag": "0.5.1", "commit": "823d6ba3a51bbd4bf6a34096681e8dbe92568f47", "version": "0.5.1" },
+    "hpfs": { "tag": "0.5.1", "commit": "e14b0fe19a07ded34f4467894e2f09c1d867ab1f", "version": "0.5.1" },
     "hpws": { "tag": "0.9.1", "commit": "9233d2822ecd8c05370c27b61d5e7ea5f8547096", "version": "0.9.1" }
   },
   "platforms": {
