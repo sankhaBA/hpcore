@@ -75,6 +75,25 @@ gh release edit 0.6.6 --repo sankhaBA/hpcore --prerelease=false --latest
 ```
 5. To revoke a release, add its version to `engine.revoked` of each affected network in evernode-resources `definitions/definitions.json`.
 
+## Host build cost
+Measured on a testnet host with 1 vCPU (Intel Broadwell, 2.4 GHz), 2 GB RAM, 2.4 GB swap, Ubuntu 20.04 and cgroup v1. The builder ran with the `engine.cfg` defaults: `jobs: 1`, `cpu_quota_percent: 100`, `memory_max_mb: 3072`, nice 19. Hosts with more cores still build with one job, so expect similar times.
+
+| Run | Wall time |
+| --- | --- |
+| First build during `evernode update` (both builder images, then ubt20 and ubt24) | about 60 min (ubt20 26.5 min, ubt24 33 min) |
+| One OS, builder image cached, one tenant instance running | about 21 min |
+| A new release, both OSes, builder images cached, no instances | about 15.5 min |
+| Repeat run with nothing new | 5–9 s |
+
+| Resource | Use |
+| --- | --- |
+| Builder CPU | about 42% of one vCPU while compiling. The quota never throttled it, and tenants keep priority through nice 19. |
+| Builder memory (cgroup peak) | 1127 MB for the first build, 829 MB for a compile-only rebuild. That is well under the 3072 MB limit. |
+| Disk under `/home/sashibuilder` (rootless Docker) | about 1.4 GB: builder images 559 MB (ubt20) and 656 MB (ubt24), smoke images 84 MB each, base images 151 MB |
+| Disk under `/var/lib/sashimono` | about 21 MB with one release: about 6 MB of builds for both OSes, the rest source cache under `engine/work`. The cache was 35 MB with three releases' sources, since `gc` does not prune it. |
+
+These fit the installer's `engine_build_disk_kb` budget of 3 GB, with room for a second release and its source cache.
+
 ## Repository variables
 The release workflows need these Actions variables. They use only the built-in `GITHUB_TOKEN`, so no secrets are needed.
 
